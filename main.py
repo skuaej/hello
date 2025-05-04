@@ -3,7 +3,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
 
 #created by @cyber_ansh on telegram 
-BOT_TOKEN = "Apna bot token daalo na meri jaan "
+BOT_TOKEN = "7250807380:AAE-dlbFTQUJy7BQfW_TTnUnZXAXlq8bE7U"
 API_URL = "https://instadownload.ytansh038.workers.dev/?url="
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
