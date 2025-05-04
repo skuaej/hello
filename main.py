@@ -1,4 +1,5 @@
-import osimport requests
+import os
+import requests
 import asyncio
 import nest_asyncio
 from telegram import Update
@@ -40,6 +41,5 @@ def main():
     
     app.run_polling()
 
-if name == "__main__":
+if name == "main":
     main()
-
