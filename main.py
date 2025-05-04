@@ -1,74 +1,46 @@
+limport os
 import requests
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
+import asyncio
+import nest_asyncio
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-#created by @cyber_ansh on telegram 
-BOT_TOKEN = "7250807380:AAE-dlbFTQUJy7BQfW_TTnUnZXAXlq8bE7U"
-API_URL = "https://instadownload.ytansh038.workers.dev/?url="
+# Apply nest_asyncio to prevent event loop issues
+nest_asyncio.apply()
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Telegram bot token
+TOKEN = "7250807380:AAE-dlbFTQUJy7BQfW_TTnUnZXAXlq8bE7U"
 
-async def start(update: Update, context: CallbackContext) -> None:
-    buttons = [
-        [InlineKeyboardButton("👨‍💻 Owner", url="t.me/cyber_ansh")],
-        [InlineKeyboardButton("🔹 Support", url="https://t.me/cyber_ansh")],
-        [InlineKeyboardButton("🔸 Group", url="https://t.me/+7AUuVrP8F69kYWY1")]
-    ]
-    reply_markup = InlineKeyboardMarkup(buttons)
+# API URL
+API_URL = "https://ytvideownloader.ytansh038.workers.dev/?url={}"  # Replace with your actual API URL
+
+async def start(update: Update, context: CallbackContext):
+    await update.message.reply_text("Send me a YouTube video link to download.")
+
+async def download_video(update: Update, context: CallbackContext):
+    url = update.message.text
+    downloading_msg = await update.message.reply_text("Downloading... Please wait.")
+    response = requests.get(API_URL.format(url))
     
-    await update.message.reply_text(
-        "Welcome! Send me an Instagram Reel/Video link and I will download it for you.",
-        reply_markup=reply_markup
-    )
-
-async def download_instagram_video(update: Update, context: CallbackContext) -> None:
-    message = update.message
-    chat_id = message.chat_id
-    message_id = message.message_id  # User ka message ID (delete karne ke liye)
-
-    if "instagram.com" not in message.text:
-        sent_message = await message.reply_text("❌ Invalid Instagram URL. Please send a valid Instagram Reel or Video link.")
-        await sent_message.delete()
-        return
-
-    # "Downloading..." message send karo
-    progress_message = await message.reply_text("🔄 Downloading your video, please wait...")
-
-    try:
-        response = requests.get(API_URL + message.text).json()
-
-        if response.get("error"):
-            await message.reply_text("❌ Failed to fetch the video. Please try again later.")
-            await progress_message.delete()
-            return
-
-        video_url = response["result"]["url"]
-        file_size = response["result"]["formattedSize"]
-
-        await message.reply_text(f"✅ Video Found! Size: {file_size}\n⬇ Downloading...")
-
-        # Video send karo
-        sent_video = await message.reply_video(video=video_url, caption="Here is your downloaded Instagram video!")
-
-        # **FIX 1**: Message delete method correctly call karo
-         # User ka Instagram link waala message delete karo
-        await progress_message.delete()  # "Downloading..." message delete karo
+    if response.status_code == 200:
+        data = response.json()
         
-        
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        await message.reply_text("❌ An error occurred. Please try again later.")
-        await progress_message.delete()
+        if not data.get("error", True):
+            video_url = data.get("video_with_audio", [{}])[0].get("url", "")
+            
+            if video_url:
+                await update.message.reply_video(video_url)
+                await context.bot.delete_message(chat_id=update.message.chat_id, message_id=downloading_msg.message_id)
+
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-
+    app = Application.builder().token(TOKEN).build()
+    
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_instagram_video))
-
-    logger.info("Bot is running...")
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
+    
     app.run_polling()
 
-if __name__ == "__main__":
+if name == "__main__":
     main()
+
