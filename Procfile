@@ -1,2 +1,1 @@
-worker: python3
-telegram_instagram_downloader.py
+worker: python3 telegram_instagram_downloader.py
