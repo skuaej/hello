@@ -1,5 +1,6 @@
 import instaloader
 import requests
+import os
 from io import BytesIO
 from telegram import Update
 from telegram.ext import (
@@ -18,8 +19,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Replace with your Telegram Bot Token from BotFather
-BOT_TOKEN = "7250807380:AAE-dlbFTQUJy7BQfW_TTnUnZXAXlq8bE7U"
+# Get Telegram Bot Token from environment variable
+BOT_TOKEN = os.getenv("7250807380:AAE-dlbFTQUJy7BQfW_TTnUnZXAXlq8bE7U")
+if not BOT_TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set")
 
 # Initialize Instaloader
 ig = instaloader.Instaloader()
@@ -81,7 +84,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_photo(photo=media, filename="instagram_image.jpg")
         await update.message.reply_text("Download successful! Send another URL or use /start to restart.")
     elif media_type == "rate_limit":
-        await update.message.reply_text("Rate limit reached. Please try again later.")
+        await update.message.reply_text("Rate limit reached. Please try again later or contact the bot admin.")
     else:
         await update.message.reply_text("Failed to download the Instagram content. Ensure the URL is correct and the post is public.")
 
