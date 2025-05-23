@@ -1,74 +1,22 @@
-import requests
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
+from telegram.ext import Application, CommandHandler
 
-#created by @cyber_ansh on telegram 
-BOT_TOKEN = "7762247683:AAGFSkwkKVKxFlN1IqPJ7SjvHQhfNyEnpBM"
-API_URL = "https://instadownload.ytansh038.workers.dev/?url="
+# Replace 'YOUR_BOT_TOKEN' with the token you got from @BotFather
+BOT_TOKEN = '7762247683:AAGFSkwkKVKxFlN1IqPJ7SjvHQhfNyEnpBM'
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-async def start(update: Update, context: CallbackContext) -> None:
-    buttons = [
-        [InlineKeyboardButton("👨‍💻 Owner", url="t.me/cyber_ansh")],
-        [InlineKeyboardButton("🔹 Support", url="https://t.me/cyber_ansh")],
-        [InlineKeyboardButton("🔸 Group", url="https://t.me/+7AUuVrP8F69kYWY1")]
-    ]
-    reply_markup = InlineKeyboardMarkup(buttons)
-    
-    await update.message.reply_text(
-        "Welcome! Send me an Instagram Reel/Video link and I will download it for you.",
-        reply_markup=reply_markup
-    )
-
-async def download_instagram_video(update: Update, context: CallbackContext) -> None:
-    message = update.message
-    chat_id = message.chat_id
-    message_id = message.message_id  # User ka message ID (delete karne ke liye)
-
-    if "instagram.com" not in message.text:
-        sent_message = await message.reply_text("❌ Invalid Instagram URL. Please send a valid Instagram Reel or Video link.")
-        await sent_message.delete()
-        return
-
-    # "Downloading..." message send karo
-    progress_message = await message.reply_text("🔄 Downloading your video, please wait...")
-
-    try:
-        response = requests.get(API_URL + message.text).json()
-
-        if response.get("error"):
-            await message.reply_text("❌ Failed to fetch the video. Please try again later.")
-            await progress_message.delete()
-            return
-
-        video_url = response["result"]["url"]
-        file_size = response["result"]["formattedSize"]
-
-        await message.reply_text(f"✅ Video Found! Size: {file_size}\n⬇ Downloading...")
-
-        # Video send karo
-        sent_video = await message.reply_video(video=video_url, caption="Here is your downloaded Instagram video!")
-
-        # **FIX 1**: Message delete method correctly call karo
-         # User ka Instagram link waala message delete karo
-        await progress_message.delete()  # "Downloading..." message delete karo
-        
-        
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        await message.reply_text("❌ An error occurred. Please try again later.")
-        await progress_message.delete()
+# Define the start command handler
+async def start(update, context):
+    await update.message.reply_text('hi')
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    # Create the Application and pass the bot token
+    application = Application.builder().token(BOT_TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_instagram_video))
+    # Add handler for the /start command
+    application.add_handler(CommandHandler('start', start))
 
-    logger.info("Bot is running...")
-    app.run_polling()
+    # Start the bot
+    print("Bot is running...")
+    application.run_polling()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
