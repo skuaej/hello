@@ -72,14 +72,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-Ye raha insta reels download karne ka tg bot code
- 
-Requirements
- 
-
-Requests
-Python-telegram-bot
-
-
-Reaction do guys 🙃
