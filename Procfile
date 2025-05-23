@@ -1,2 +1,2 @@
-worker: python3 t.py
-web: python3 t.py
+worker: python3 -m insta
+web: python3 -m insta
