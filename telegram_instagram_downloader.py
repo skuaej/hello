@@ -1,110 +1,85 @@
-import instaloader
 import requests
-import os
-from io import BytesIO
-from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    filters,
-    ContextTypes,
-)
-import logging
-import re
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
 
-# Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
+#created by @cyber_ansh on telegram 
+BOT_TOKEN = "7762247683:AAGFSkwkKVKxFlN1IqPJ7SjvHQhfNyEnpBM"
+API_URL = "https://instadownload.ytansh038.workers.dev/?url="
+
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Get Telegram Bot Token from environment variable
-BOT_TOKEN = os.getenv("7250807380:AAE-dlbFTQUJy7BQfW_TTnUnZXAXlq8bE7U")
-if not BOT_TOKEN:
-    raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set")
-
-# Initialize Instaloader
-ig = instaloader.Instaloader()
-
-# Function to validate Instagram URL
-def is_valid_instagram_url(url):
-    pattern = r"https?://www\.instagram\.com/(p|reel)/[A-Za-z0-9_-]+/?"
-    return re.match(pattern, url)
-
-# Function to download Instagram media
-def download_instagram_media(url):
-    try:
-        # Extract shortcode from URL
-        shortcode = url.split("/")[-2]
-        post = instaloader.Post.from_shortcode(ig.context, shortcode)
-        
-        # Download media
-        if post.is_video:
-            video_url = post.video_url
-            response = requests.get(video_url)
-            if response.status_code == 200:
-                return BytesIO(response.content), "video"
-        else:
-            image_url = post.url
-            response = requests.get(image_url)
-            if response.status_code == 200:
-                return BytesIO(response.content), "image"
-        
-        return None, None
-    except instaloader.exceptions.TooManyRequestsException:
-        logger.error("Rate limit reached.")
-        return None, "rate_limit"
-    except Exception as e:
-        logger.error(f"Error downloading media: {e}")
-        return None, None
-
-# Command handler for /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: CallbackContext) -> None:
+    buttons = [
+        [InlineKeyboardButton("👨‍💻 Owner", url="t.me/cyber_ansh")],
+        [InlineKeyboardButton("🔹 Support", url="https://t.me/cyber_ansh")],
+        [InlineKeyboardButton("🔸 Group", url="https://t.me/+7AUuVrP8F69kYWY1")]
+    ]
+    reply_markup = InlineKeyboardMarkup(buttons)
+    
     await update.message.reply_text(
-        "Hi! I'm an Instagram Downloader Bot. Send me a public Instagram post or reel URL, and I'll download the media for you!"
+        "Welcome! Send me an Instagram Reel/Video link and I will download it for you.",
+        reply_markup=reply_markup
     )
 
-# Message handler for Instagram URLs
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = update.message.text
-    
-    if not is_valid_instagram_url(url):
-        await update.message.reply_text("Please send a valid Instagram post or reel URL.")
-        return
-    
-    await update.message.reply_text("Processing your request, please wait...")
-    
-    media, media_type = download_instagram_media(url)
-    
-    if media and media_type in ["video", "image"]:
-        if media_type == "video":
-            await update.message.reply_video(video=media, filename="instagram_video.mp4")
-        else:
-            await update.message.reply_photo(photo=media, filename="instagram_image.jpg")
-        await update.message.reply_text("Download successful! Send another URL or use /start to restart.")
-    elif media_type == "rate_limit":
-        await update.message.reply_text("Rate limit reached. Please try again later or contact the bot admin.")
-    else:
-        await update.message.reply_text("Failed to download the Instagram content. Ensure the URL is correct and the post is public.")
+async def download_instagram_video(update: Update, context: CallbackContext) -> None:
+    message = update.message
+    chat_id = message.chat_id
+    message_id = message.message_id  # User ka message ID (delete karne ke liye)
 
-# Error handler
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"Update {update} caused error {context.error}")
-    if update and update.message:
-        await update.message.reply_text("An error occurred. Please try again.")
+    if "instagram.com" not in message.text:
+        sent_message = await message.reply_text("❌ Invalid Instagram URL. Please send a valid Instagram Reel or Video link.")
+        await sent_message.delete()
+        return
+
+    # "Downloading..." message send karo
+    progress_message = await message.reply_text("🔄 Downloading your video, please wait...")
+
+    try:
+        response = requests.get(API_URL + message.text).json()
+
+        if response.get("error"):
+            await message.reply_text("❌ Failed to fetch the video. Please try again later.")
+            await progress_message.delete()
+            return
+
+        video_url = response["result"]["url"]
+        file_size = response["result"]["formattedSize"]
+
+        await message.reply_text(f"✅ Video Found! Size: {file_size}\n⬇ Downloading...")
+
+        # Video send karo
+        sent_video = await message.reply_video(video=video_url, caption="Here is your downloaded Instagram video!")
+
+        # **FIX 1**: Message delete method correctly call karo
+         # User ka Instagram link waala message delete karo
+        await progress_message.delete()  # "Downloading..." message delete karo
+        
+        
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        await message.reply_text("❌ An error occurred. Please try again later.")
+        await progress_message.delete()
 
 def main():
-    # Create the Application
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # Add handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_error_handler(error_handler)
-    
-    # Start the bot
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_instagram_video))
+
+    logger.info("Bot is running...")
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
+
+Ye raha insta reels download karne ka tg bot code
+ 
+Requirements
+ 
+
+Requests
+Python-telegram-bot
+
+
+Reaction do guys 🙃
