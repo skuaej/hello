@@ -4,3 +4,4 @@ requests==2.32.3
 instaloader
 Pillow
 torch
+os
