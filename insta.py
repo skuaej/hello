@@ -1,50 +1,71 @@
+import os
 import replicate
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-import os
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import requests
+from io import BytesIO
 
-# Set your API keys
+# Set your API tokens (preferably use environment variables)
 REPLICATE_API_TOKEN = "r8_Sw4KDHsAwqnm5L6nXZ5fkXal0RrLI8E1g4XPc"
-BOT_TOKEN = "7803850244:AAGQCXHd0R7ucXC2chqhQ4xVLKuO8YE6GzY"
+TELEGRAM_BOT_TOKEN = "7803850244:AAGQCXHd0R7ucXC2chqhQ4xVLKuO8YE6GzY"
 
-# Replicate setup
+# Initialize Replicate client
 os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
+client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-# Start command
+# Function to generate Ghibli-style image using Replicate
+def generate_ghibli_image(prompt):
+    # Use Flux.1 model for high-quality Ghibli-style generation
+    model = "black-forest-labs/flux.1-dev"
+    input = {
+        "prompt": f"{prompt}, in the style of Studio Ghibli, whimsical, soft colors, detailed landscapes, hand-drawn aesthetic",
+        "num_outputs": 1,
+        "aspect_ratio": "1:1",
+        "output_format": "png",
+        "output_quality": 80
+    }
+    try:
+        output = client.run(model, input=input)
+        return output[0]  # Returns the URL of the generated image
+    except Exception as e:
+        return f"Error generating image: {str(e)}"
+
+# Telegram bot command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🌸 Welcome to the Ghibli Image Bot! Use /ghibli <your scene> to get a Ghibli-style image.")
-
-# Ghibli image generation
-async def ghibli(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    prompt = " ".join(context.args)
-    if not prompt:
-        await update.message.reply_text("Please provide a prompt. Example:\n/ghibli A girl flying on a broom over the ocean")
-        return
-
-    await update.message.reply_text("✨ Generating your Ghibli-style image, please wait...")
-
-    # Call Replicate API with a Ghibli-style model
-    output = replicate.run(
-        "fofr/anything-v4.5:37a3a4a1d683e2c327f4f02a0efdb24a924f3021898cf9473d99473163f9cf78",
-        input={
-            "prompt": f"{prompt}, Studio Ghibli style, anime illustration, 4k",
-            "width": 512,
-            "height": 512
-        }
+    await update.message.reply_text(
+        "Welcome to the Ghibli Art Bot! Send a description (e.g., 'A serene forest with a Totoro-like creature') to generate a Studio Ghibli-style image."
     )
 
-    image_url = output[0] if isinstance(output, list) else output
-    await update.message.reply_photo(photo=image_url, caption="Here is your Ghibli-style creation! 🌟")
+# Telegram bot message handler for text prompts
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_prompt = update.message.text
+    await update.message.reply_text("Generating your Ghibli-style image, please wait...")
 
-# Run bot
-async def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("ghibli", ghibli))
+    # Generate image
+    image_url = generate_ghibli_image(user_prompt)
+    
+    if isinstance(image_url, str) and image_url.startswith("http"):
+        # Download the image
+        response = requests.get(image_url)
+        if response.status_code == 200:
+            image = BytesIO(response.content)
+            await update.message.reply_photo(photo=image, caption="Your Ghibli-style art!")
+        else:
+            await update.message.reply_text("Failed to retrieve the generated image.")
+    else:
+        await update.message.reply_text(image_url)  # Error message
+
+# Main function to run the bot
+def main():
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Add handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    # Start the bot
     print("Bot is running...")
-    await app.run_polling()
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-if __name__ == "__main__":
-
-    import asyncio
-    asyncio.run(main())
+if name == "main":
+    main()
