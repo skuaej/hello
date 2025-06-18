@@ -1,46 +1,48 @@
-import os
-import logging
+import replicate
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from PIL import Image
-import torch
-from diffusers import StableDiffusionPipeline
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import os
 
-# Logging setup
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+# Set your API keys
+REPLICATE_API_TOKEN = "r8_Sw4KDHsAwqnm5L6nXZ5fkXal0RrLI8E1g4XPc"
+BOT_TOKEN = "7803850244:AAGQCXHd0R7ucXC2chqhQ4xVLKuO8YE6GzY"
 
-# Load AI Model (Stable Diffusion or any other model for Ghibli-style)
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model_id = "stablediffusionapi/ghibli-art"
-pipeline = StableDiffusionPipeline.from_pretrained(model_id).to(device)
+# Replicate setup
+os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Send me a photo and I'll transform it into Ghibli-style art!")
+# Start command
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🌸 Welcome to the Ghibli Image Bot! Use /ghibli <your scene> to get a Ghibli-style image.")
 
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    photo_file = await update.message.photo[-1].get_file()
-    photo_path = "input.jpg"
-    await photo_file.download_to_drive(photo_path)
-    
-    # Load and process the image
-    input_image = Image.open(photo_path)
-    prompt = "Convert this image into Ghibli-style art"
-    output_image = pipeline(prompt, image=input_image).images[0]
-    output_path = "output.jpg"
-    output_image.save(output_path)
-    
-    await update.message.reply_photo(photo=open(output_path, 'rb'))
+# Ghibli image generation
+async def ghibli(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    prompt = " ".join(context.args)
+    if not prompt:
+        await update.message.reply_text("Please provide a prompt. Example:\n/ghibli A girl flying on a broom over the ocean")
+        return
 
-#YOUR BOT TOKEN 
+    await update.message.reply_text("✨ Generating your Ghibli-style image, please wait...")
+
+    # Call Replicate API with a Ghibli-style model
+    output = replicate.run(
+        "fofr/anything-v4.5:37a3a4a1d683e2c327f4f02a0efdb24a924f3021898cf9473d99473163f9cf78",
+        input={
+            "prompt": f"{prompt}, Studio Ghibli style, anime illustration, 4k",
+            "width": 512,
+            "height": 512
+        }
+    )
+
+    image_url = output[0] if isinstance(output, list) else output
+    await update.message.reply_photo(photo=image_url, caption="Here is your Ghibli-style creation! 🌟")
+
+# Run bot
 async def main():
-    TOKEN = "7803850244:AAGQCXHd0R7ucXC2chqhQ4xVLKuO8YE6GzY"
-    application = Application.builder().token(TOKEN).build()
-    
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    
-    await application.start_polling()
-    await application.idle()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("ghibli", ghibli))
+    print("Bot is running...")
+    await app.run_polling()
 
 if name == "main":
     import asyncio
