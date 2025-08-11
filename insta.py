@@ -1,4 +1,4 @@
-mimport os
+import os
 from telegram.ext import Updater, CommandHandler
 
 BOT_TOKEN = os.environ.get("8171830754:AAFHMKLVn5XjRM-Sm11vm5q9VJ37iyBMeaA")
