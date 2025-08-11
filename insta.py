@@ -1,36 +1,26 @@
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from telegram import Update
-import logging
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Enable logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
-)
+# Replace 'YOUR_API_TOKEN' with the actual token you received from BotFather.
+API_TOKEN = '8171830754:AAFHMKLVn5XjRM-Sm11vm5q9VJ37iyBMeaA'
 
-logger = logging.getLogger(__name__)
+# Define the command handler for the /start command.
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Sends a 'Hi!' message when the /start command is issued."""
+    await update.message.reply_text('Hi!')
 
-def start(update: Update, context: CallbackContext) -> None:
-    """Sends a message when the command /start is issued."""
-    update.message.reply_text('Hi!')
 
 def main() -> None:
-    """Start the bot."""
-    # Replace 'YOUR_TOKEN' with your actual bot token
-    updater = Updater("8171830754:AAFHMKLVn5XjRM-Sm11vm5q9VJ37iyBMeaA", use_context=True)
+    """Starts the bot."""
+    # Create the Application and pass it your bot's token.
+    application = ApplicationBuilder().token(API_TOKEN).build()
 
-    # Get the dispatcher to register handlers
-    dispatcher = updater.dispatcher
+    # Register the command handler.
+    application.add_handler(CommandHandler("start", start_command))
 
-    # on different commands - answer in Telegram
-    dispatcher.add_handler(CommandHandler("start", start))
+    # Start the bot, polling for updates.
+    application.run_polling(poll_interval=2) # polls every 2 seconds
 
-    # Start the Bot
-    updater.start_polling()
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
-    updater.idle()
 
 if __name__ == '__main__':
     main()
