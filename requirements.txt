@@ -1,4 +1,2 @@
-instaloader==4.12.1
-python-telegram-bot==21.5 
-requests==2.32.3
-replicate
+python-telegram-bot>=20.4
+aiohttp>=3.8
